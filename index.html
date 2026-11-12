@@ -3986,6 +3986,23 @@ body.chat-only .to-top-btn,body.chat-only .bottomnav,body.chat-only .more-layer,
   .dash .dash-col-b .dash-sec{margin-top:0;}
   .dash .dash-col-a > :first-child{margin-top:0;}
 }
+/* Beranda memenuhi layar lebar: lebih lebar di >=1400px, tiga kolom di >=1560px */
+@media(min-width:1400px){
+  main:has(.dash){max-width:1520px;}
+  .dash{max-width:1480px;}
+  .dash .dash-cols{column-gap:34px;}
+}
+@media(min-width:1560px){
+  main:has(.dash){max-width:1800px;}
+  .dash{max-width:1760px;}
+  .dash .dash-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.92fr); column-gap:30px;}
+  .dash .dash-col-a{display:contents;}
+  .dash .dash-sub-1{grid-column:1; min-width:0;}
+  .dash .dash-sub-2{grid-column:2; min-width:0;}
+  .dash .dash-col-b{grid-column:3; min-width:0;}
+  .dash .dash-sub > :first-child{margin-top:0;}
+  .dash .dash-sub-2 > :first-child{margin-top:0;}
+}
 @media(min-width:1280px){
   .cal-layout{display:grid; grid-template-columns:minmax(0,500px) minmax(0,1fr); column-gap:30px; align-items:start;}
   .cal-main{position:sticky; top:112px;}
@@ -5750,6 +5767,7 @@ function kmFakta(j,projectId){
 // job lama yang sudah selesai & lunas tidak otomatis dibuat di Meja Kaone (bisa manual dari Detail Job)
 function kmLayak(j){
   if(j.kmSkip||j.kmOff) return false;   // Lacak dimatikan -> dilewati diam-diam (bukan galat, tidak dihitung gagal)
+  if(j.kmPid) return true;   // sudah tersambung ke Meja Kaone: perubahan (mis. Sudah dijemput) selalu dikirim, walau tanggal acara sudah lewat
   // v-baru: hanya job HARI INI dan seterusnya yang dikirim otomatis ke Meja Kaone (termasuk yang sudah tersambung: job lewat tidak dikirim ulang).
   // Job lama tetap bisa dibuat manual lewat tombol "Buat di Meja Kaone" / "Sinkronkan" di Detail Job.
   const f=kmFakta(j), akhir=f.event_end||f.event_date||'';
@@ -5792,6 +5810,7 @@ async function kmSinkron(opts){
     for(const j of jobs){
       if(n>=30||kmFatal) break;
       if(!kmLayak(j)) continue;
+      { const sg=JSON.stringify(kmFakta(j)); if(j.kmSig===sg||(j.kmErrSig===sg&&Date.now()-(j.kmErrAt||0)<600000)) continue; }   // tidak berubah / sedang jeda galat: lewati tanpa dihitung ke batas 30
       n++;
       try{ const h=await kmKirim(j,false); if(h===true) ubah++; else if(h==='off') lewat++; }catch(e){ gagal++; }
     }
@@ -11071,17 +11090,20 @@ function viewBeranda(){
 
     <div class="dash-cols">
       <div class="dash-col dash-col-a">
-        ${jepiCard}
+        <div class="dash-sub dash-sub-1">
+          ${jepiCard}
 
-        ${pesananBannerHtml()}
+          ${pesananBannerHtml()}
 
-        ${nextCard}
+          ${nextCard}
+        </div>
+        <div class="dash-sub dash-sub-2">
+          ${weekHtml}
 
-        ${weekHtml}
+          ${bkBerandaHtml()}
 
-        ${bkBerandaHtml()}
-
-        ${tgBerandaHtml()}
+          ${tgBerandaHtml()}
+        </div>
       </div>
       <div class="dash-col dash-col-b">
         <h2 class="dash-sec">Perlu dikerjakan ${todos.length ? `<small>${totalTodo} item</small>` : ''}</h2>
@@ -20309,12 +20331,21 @@ function downloadRekapImage(){
    jadi mereka tidak akan tahu ada pembaruan. Jangan pernah melewatkan
    langkah ini walaupun perubahannya terasa sepele.
 ========================================================= */
-const APP_VERSION = '1.32.0'; // ⚠️ naikkan tiap ada perubahan - lihat catatan wajib di atas
+const APP_VERSION = '1.33.0'; // ⚠️ naikkan tiap ada perubahan - lihat catatan wajib di atas
 // Setiap item changelog berbentuk { kategori, teks }. Kategori yang dipakai konsisten
 // di seluruh riwayat: 'Fitur' (hal baru), 'Perbaikan' (bugfix), 'Peningkatan' (penyempurnaan
 // dari yang sudah ada). Kategori lain boleh dipakai kalau memang perlu - tampilannya akan
 // otomatis jatuh ke gaya netral (lihat .cat-lainnya di CSS).
 const CHANGELOG = [
+  {
+    version: '1.33.0',
+    tanggal: '12 November 2026',
+    items: [
+      { kategori: 'Peningkatan', teks: 'Beranda di layar PC lebih lebar dan padat. Isinya kini memenuhi layar, dan di layar lebar (sekitar 1560 piksel ke atas) terbagi menjadi tiga kolom: job berikutnya, jadwal dan omzet, serta daftar "Perlu dikerjakan". Tampilan HP tidak berubah.' },
+      { kategori: 'Perbaikan', teks: 'Job yang sudah tersambung ke Meja Kaone kini selalu ikut diperbarui, termasuk perubahan seperti "Sudah dijemput", walau tanggal acaranya sudah lewat.' },
+      { kategori: 'Perbaikan', teks: 'Sinkronisasi ke Meja Kaone tidak lagi tersendat oleh job lama. Job yang datanya tidak berubah dilewati begitu saja, sehingga job baru dan job yang berubah selalu mendapat giliran dikirim.' },
+    ]
+  },
   {
     version: '1.32.0',
     tanggal: '11 November 2026',
